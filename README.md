@@ -1,282 +1,219 @@
-AI News Event Clustering \& Timeline Builder
+# **AI News Event Clustering & Timeline Builder**
 
-📌 Project Overview
+---
 
-In modern media, the same real-world event is reported by hundreds of news articles across different platforms and dates. This makes it difficult to understand:
+##  **Project Overview**
 
+In modern media ecosystems, the same real-world event is reported by **hundreds or even thousands of news articles** across different platforms, countries, and dates. This makes it difficult to clearly understand:
 
+- What the actual event is  
+- How the event evolved over time  
+- What were the key milestones and turning points  
 
-What the actual event is
+This project builds an **AI-based system** that automatically:
 
-How it evolved over time
-
-What were the key milestones
-
-This project builds an AI-based system that automatically:
-
-
-
-Groups news articles into real-world events using unsupervised learning
-
-Constructs a chronological timeline for each event
-
-Generates a readable event summary
-
-Presents results through a Streamlit dashboard
+- Groups large volumes of news articles into **real-world events** using unsupervised learning  
+- Constructs a **chronological timeline** for each detected event  
+- Generates **human-readable event summaries**  
+- Presents insights through an **interactive Streamlit dashboard**
 
 The project focuses on:
 
+- Natural Language Processing (NLP)  
+- Large-scale text processing  
+- Unsupervised machine learning  
+- Event storytelling from unstructured data  
 
+---
 
-Natural Language Processing (NLP)
+##  **Dataset Details**
 
-Large-scale text processing
+**Source:** GDELT Global News Dataset (latest 1 month)  
+**Initial Size:** ~2 million news articles  
 
-Unsupervised clustering
+###  Original Fields Used
+- `date` – Published date  
+- `article_title` – Original article title  
+- `article_content` – Full article text  
+- `source` – News publisher  
+- `url` – Article link  
 
-Event storytelling from data
+###  Engineered Fields (Created by Me)
+- `project_title` – Cleaned and enriched title representation  
+- `project_content` – Combined title + article content  
+- `clean_text` – Fully cleaned and lemmatized text  
+- `event_cluster` – Cluster ID from MiniBatch KMeans  
+- `event_label` – Human-readable event name  
+- `event_summary` – Short descriptive summary of the event  
+- `is_noise` – Flag for unrelated or noisy articles  
+- `year_month` – Temporal grouping feature  
 
-📊 Dataset Details
+To improve performance and storage efficiency, the processed dataset was converted from **CSV → Parquet**.
 
-Source: GDELT News Dataset (latest 1 month of data)
+---
 
-Initial size: ~2 million articles
+##  **System Architecture & Pipeline**
 
+### 1️⃣ **Data Ingestion & Initial Cleaning**
 
+**Problem:**  
+Raw GDELT data is massive, noisy, and inconsistent.
 
-Key fields used:
+**Solution:**  
+- Downloaded the latest 1-month GDELT data  
+- Sampled ~2 million articles  
+- Standardized column names  
+- Handled missing values  
+- Converted dates to proper datetime format  
 
-date – Published date
+---
 
-article\_title – Original title
+### 2️⃣ **Title & Content Engineering (Key Innovation)**
 
-article\_content – Original content
+**Challenge Faced:**  
+Article titles were highly repetitive, leading to poor clustering and weak event labels.
 
-source – News outlet
+**How I Solved It:**  
+- Combined article title and content into richer representations  
+- Created:
+  - `project_title`  
+  - `project_content`  
 
-url – Article link
+This significantly improved semantic quality during clustering.
 
-Engineered fields created by you:
+---
 
-project\_title – Merged and cleaned title representation
+### 3️⃣ **Text Preprocessing**
 
-project\_content – Combined title + article content
+Steps performed:
 
-clean\_text – Lemmatized and cleaned text
+- Lowercasing  
+- Removing special characters and numbers  
+- Stopword removal  
+- Lemmatization  
 
-event\_cluster – Cluster ID from MiniBatch KMeans
+**Final feature created:** `clean_text`
 
-event\_label – Human-readable event name
+---
 
-event\_summary – Short event description
+### 4️⃣ **Text Representation (Vectorization Strategy)**
 
-is\_noise – Flag for unrelated/noisy articles
+**Approaches Tested:**
+- Bag of Words  
+- Word2Vec  
+- Sentence Embeddings  
 
-year\_month – Temporal grouping feature
+**Problem:**  
+These approaches failed due to memory limitations on 2M+ rows.
 
-To improve performance, the cleaned dataset was later converted from CSV → Parquet.
+**Final Choice:** **HashingVectorizer**
 
+**Why HashingVectorizer?**
+- Memory efficient  
+- No vocabulary storage required  
+- Scales well to very large datasets  
+- Stable and fast for sparse text vectors  
 
+---
 
-🏗️ System Architecture (Your exact pipeline)
+### 5️⃣ **Event Clustering (Core AI Task)**
 
-1\) Data Ingestion \& Basic Cleaning
+**Algorithm Used:** **MiniBatch KMeans**
 
-You:
+**Why MiniBatch KMeans?**
+- Optimized for large-scale datasets  
+- Faster than standard KMeans  
+- Lower memory usage  
 
+**Cluster Optimization:**
+- Used the **Elbow Method** to determine the optimal number of clusters  
 
+**Noise Handling:**
+- Removed very small clusters  
+- Filtered irrelevant keyword patterns  
+- Flagged unrelated articles as noise  
 
-Downloaded latest 1 month GDELT data
+---
 
-Selected a 2 million article sample
+### 6️⃣ **Event Labeling**
 
-Standardized column names
+For each cluster, I:
+- Extracted top keywords  
+- Analyzed dominant sources  
+- Reviewed recurring themes  
 
-Handled missing values
+**Example Event Labels:**
+- *World Economic Forum – Davos (2026-01)*  
+- *US–Venezuela Relations (2026-01)*  
+- *India Current Affairs (2026-01)*  
 
-Converted dates to proper datetime format
+Stored as: `event_label`
 
-2\) Title \& Content Engineering (Key Innovation)
+---
 
-You discovered an important issue:
+### 7️⃣ **Timeline Construction**
 
+For each detected event:
+- Articles were sorted chronologically  
+- Major developments were identified  
+- Event progression was captured as a timeline  
 
+This helped transform raw news articles into **story-like event sequences**.
 
-Many article titles were too similar, causing poor labeling and duplicate keywords.
+---
 
-To fix this, you:
+### 8️⃣ **Event Summary Generation**
 
+Each event cluster includes an automatically generated summary such as:
 
+> “This event began in late December 2025, experienced major developments in January 2026, and received extensive international media coverage.”
 
-Combined source article content + title into:
+Stored as: `event_summary`
 
-project\_title
+---
 
-project\_content
+### 9️⃣ **User Interface – Streamlit Dashboard**
 
-This created richer, more meaningful text for clustering.
+The final output is presented through a **Streamlit web application** that provides:
 
-3\) Text Preprocessing
+- Event selection via dropdown  
+- Timeline visualization for top events  
+- Event summaries  
+- Clickable article links within each event  
 
-You performed:
+---
 
+##  **Key Challenges & Solutions**
 
+| Challenge | Solution |
+|--------|--------|
+| Extremely large dataset | MiniBatch KMeans + sampling |
+| Memory crashes | Switched to HashingVectorizer |
+| Poor clustering quality | Combined title and content |
+| Noisy articles | Cluster size & keyword filtering |
+| Slow processing | Batch processing + Parquet format |
 
-Lowercasing
+---
 
-Removing special characters
+##  **Technologies Used**
 
-Stopword removal
+- Python  
+- Pandas, NumPy  
+- Scikit-learn  
+- Natural Language Processing (NLP)  
+- MiniBatch KMeans  
+- HashingVectorizer  
+- Streamlit  
+- Parquet  
 
-Lemmatization
+---
 
-Created a clean textual feature: clean\_text
+##  **Project Outcome**
 
-This improved semantic consistency before vectorization.
+- Clustered millions of news articles into meaningful real-world events  
+- Built event timelines showing how stories evolve over time  
+- Created a scalable and explainable NLP pipeline  
+- Delivered insights through an interactive dashboard  
 
 
-
-4\) Text Representation (Vectorization Choice)
-
-You experimented with:
-
-
-
-Bag of Words
-
-Word2Vec (word embeddings)
-
-Sentence embeddings
-
-However, they crashed due to 2M rows + memory limits.
-
-
-
-Final practical decision: 👉 HashingVectorizer
-
-
-
-Reasons:
-
-
-
-Memory efficient
-
-Works well with very large datasets
-
-No need to store full vocabulary
-
-Stable for millions of documents
-
-5\) Event Clustering (Core AI Task)
-
-You used:
-
-
-
-Mini-Batch KMeans
-
-Why?
-
-
-
-Scales well to large datasets
-
-Faster than standard KMeans
-
-Lower memory usage
-
-Suitable for sparse text vectors
-
-You determined the best number of clusters using:
-
-
-
-Elbow Method
-
-Then you:
-
-
-
-Assigned each article an event\_cluster
-
-Identified and removed noisy/unrelated clusters using:
-
-Very small cluster sizes
-
-Irrelevant keyword patterns
-
-6\) Event Labeling
-
-For each cluster, you:
-
-
-
-Extracted top keywords
-
-Checked most frequent sources
-
-Reviewed dominant themes
-
-Assigned a meaningful label such as:
-
-“World Economic Forum in Davos (2026-01)”
-
-“US–Venezuela Relations (2026-01)”
-
-“India Current Affairs (2026-01)”
-
-Stored as: event\_label
-
-
-
-7\) Timeline Construction
-
-For each event cluster:
-
-
-
-Articles were sorted by date
-
-You built a temporal sequence showing:
-
-Event start
-
-Major developments
-
-Latest updates
-
-This was later visualized in your dashboard.
-
-
-
-8\) Event Summary Generation
-
-For each cluster, you generated:
-
-
-
-Short readable summary like:
-
-“This event began on 2025-12-25, saw major developments in January 2026, and was widely covered by international media.”
-
-
-
-Stored as: event\_summary
-
-
-
-9\) User Interface — Streamlit Dashboard
-
-Your final output includes a Streamlit dashboard that shows:
-
-
-
-List of detected events (cluster dropdown)
-
-Timeline visualization for top 3 events
-
-Event summaries
-
-Option to click and read articles inside each event
 
